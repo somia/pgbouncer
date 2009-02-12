@@ -22,6 +22,62 @@
 
 #include "bouncer.h"
 
+static const char *const session_modifiers[] = {
+	"CREATE TABLE", /* CREATE TEMPORARY TABLE */
+	"DECLARE",
+	"LISTEN",
+	"PREPARE",
+	"SET",
+};
+
+/* checks whether tag starts with command */
+static bool check_session_modifier(const char *command, const MBuf *tag)
+{
+	unsigned int length;
+	unsigned int i;
+	char c;
+
+	length = mbuf_avail(tag);
+
+	for (i = 0; true; i++) {
+		c = command[i];
+
+		if (c == '\0') {
+			if (i == length)
+				return true;
+
+			c = (char) tag->pos[i];
+			return c == '\0' || c == ' ';
+		}
+
+		if (i == length || c != (char) tag->pos[i])
+			return false;
+	}
+}
+
+/* check if a query altered the session parameters etc.
+   pkt must be a CommandComplete packet - its data will be peeked into, not consumed */
+static void check_session_modification(PgSocket *server, PktHdr *command_complete)
+{
+	unsigned int i;
+
+	if (!server_relaxed_reset() || server->session_modified)
+		return;
+
+	for (i = 0; i < sizeof (session_modifiers) / sizeof (char *); i++)
+		if (check_session_modifier(session_modifiers[i], &command_complete->data)) {
+			log_debug("session modified: %s", session_modifiers[i]);
+			server->session_modified = true;
+			break;
+		}
+}
+
+static void set_session_modification(PgSocket *server)
+{
+	if (server_relaxed_reset())
+		server->session_modified = true;
+}
+
 static bool load_parameter(PgSocket *server, PktHdr *pkt, bool startup)
 {
 	const char *key, *val;
@@ -256,10 +312,19 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
 	case 'n':		/* NoData */
 	case 'G':		/* CopyInResponse */
 	case 'H':		/* CopyOutResponse */
-	case '1':		/* ParseComplete */
 	case 'A':		/* NotificationResponse */
 	case 's':		/* PortalSuspended */
+		break;
+
 	case 'C':		/* CommandComplete */
+		if (client)
+			check_session_modification(server, pkt);
+		break;
+
+	case '1':		/* ParseComplete */
+		if (client)
+			set_session_modification(server);
+		break;
 
 	/* data packets, there will be more coming */
 	case 'd':		/* CopyData(F/B) */

@@ -95,6 +95,7 @@ int cf_res_pool_size = 0;
 usec_t cf_res_pool_timeout = 5;
 
 char *cf_server_reset_query = "";
+int cf_server_relaxed_reset = false;
 char *cf_server_check_query = "select 1";
 usec_t cf_server_check_delay = 30 * USEC;
 int cf_server_round_robin = 0;
@@ -160,6 +161,7 @@ ConfElem bouncer_params[] = {
 {"autodb_idle_timeout",	true, CF_TIME, &cf_autodb_idle_timeout},
 
 {"server_reset_query",	true, CF_STR, &cf_server_reset_query},
+{"server_relaxed_reset",true, CF_INT, &cf_server_relaxed_reset},
 {"server_check_query",	true, CF_STR, &cf_server_check_query},
 {"server_check_delay",	true, CF_TIME, &cf_server_check_delay},
 {"query_timeout",	true, CF_TIME, &cf_query_timeout},

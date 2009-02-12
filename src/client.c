@@ -22,6 +22,18 @@
 
 #include "bouncer.h"
 
+/* pkt must be a Parse packet - its data will be peeked into, not consumed */
+static void check_session_modification(PgSocket *client, PktHdr *parse)
+{
+	PgSocket *server = client->link;
+
+	if (!server_relaxed_reset() || server->session_modified)
+		return;
+
+	if (mbuf_avail(&parse->data) > sizeof (int32_t) && *parse->data.pos != '\0')
+		server->session_modified = true;
+}
+
 static bool check_client_passwd(PgSocket *client, const char *passwd)
 {
 	char md5[MD5_PASSWD_LEN + 1];
@@ -327,6 +339,10 @@ static bool handle_client_work(PgSocket *client, PktHdr *pkt)
 
 		/* forward the packet */
 		sbuf_prepare_send(sbuf, &client->link->sbuf, pkt->len);
+
+		if (pkt->type == 'P') /* Parse */
+			check_session_modification(client, pkt);
+
 		break;
 
 	/* client wants to go away */

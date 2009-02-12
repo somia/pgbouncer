@@ -272,6 +272,8 @@ struct PgSocket {
 	bool own_user:1;	/* console client: client with same uid on unix socket */
 	bool wait_for_response:1;/* console client: waits for completion of PAUSE/SUSPEND cmd */
 
+	bool session_modified:1;/* was the session modified by current client? */
+
 	usec_t connect_time;	/* when connection was made */
 	usec_t request_time;	/* last activity time */
 	usec_t query_start;	/* query start moment */
@@ -323,6 +325,7 @@ extern usec_t cf_suspend_timeout;
 extern usec_t cf_server_lifetime;
 extern usec_t cf_server_idle_timeout;
 extern char * cf_server_reset_query;
+extern int cf_server_relaxed_reset;
 extern char * cf_server_check_query;
 extern usec_t cf_server_check_delay;
 extern usec_t cf_server_connect_timeout;
@@ -383,4 +386,8 @@ first_socket(StatList *slist)
 
 void load_config(bool reload);
 
-
+static inline bool _MUSTCHECK server_relaxed_reset(void)
+{
+	return cf_server_relaxed_reset && *cf_server_reset_query &&
+	       cf_pool_mode == POOL_SESSION;
+}

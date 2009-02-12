@@ -609,16 +609,20 @@ bool release_server(PgSocket *server)
 		server->link->link = NULL;
 		server->link = NULL;
 
-		if (*cf_server_reset_query)
-			/* notify reset is required */
-			newstate = SV_TESTED;
-		else if (cf_server_check_delay == 0 && *cf_server_check_query)
+		if (*cf_server_reset_query) {
+			if (!server_relaxed_reset() || server->session_modified) {
+				/* notify reset is required */
+				newstate = SV_TESTED;
+				server->session_modified = false;
+			}
+		} else if (cf_server_check_delay == 0 && *cf_server_check_query) {
 			/*
 			 * deprecated: before reset_query, the check_delay = 0
 			 * was used to get same effect.  This if() can be removed
 			 * after couple of releases.
 			 */
 			newstate = SV_USED;
+		}
 	case SV_USED:
 	case SV_TESTED:
 		break;
