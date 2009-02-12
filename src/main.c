@@ -90,6 +90,7 @@ int cf_auth_type = AUTH_MD5;
 char *cf_auth_file = "unconfigured_file";
 
 int cf_max_client_conn = 100;
+int cf_default_pool_max_client_conn = -1;
 int cf_default_pool_size = 20;
 int cf_res_pool_size = 0;
 usec_t cf_res_pool_timeout = 5;
@@ -147,7 +148,8 @@ ConfElem bouncer_params[] = {
 {"auth_type",		true, {get_auth, set_auth}},
 {"auth_file",		true, CF_STR, &cf_auth_file},
 {"pool_mode",		true, {get_mode, set_mode}},
-{"max_client_conn",	true, CF_INT, &cf_max_client_conn},
+{"max_client_conn",	true, {cf_get_int, cf_set_unlimited_int}, &cf_max_client_conn},
+{"default_pool_max_client_conn", true, {cf_get_int, cf_set_unlimited_int}, &cf_default_pool_max_client_conn},
 {"default_pool_size",	true, CF_INT, &cf_default_pool_size},
 {"reserve_pool_size",	true, CF_INT, &cf_res_pool_size},
 {"reserve_pool_timeout",true, CF_INT, &cf_res_pool_timeout},
@@ -553,6 +555,8 @@ static void check_limits(void)
 {
 	struct rlimit lim;
 	int total_users = statlist_count(&user_list);
+	int client_count = 0;
+	int pool_count = 0;
 	int fd_count;
 	int err;
 	List *item;
@@ -569,18 +573,33 @@ static void check_limits(void)
 		return;
 	}
 
-	/* calculate theoretical max, +10 is just in case */
-	fd_count = cf_max_client_conn + 10;
 	statlist_for_each(item, &database_list) {
 		db = container_of(item, PgDatabase, head);
+
+		if (client_count >= 0) {
+			if (db->max_client_conn >= 0)
+				client_count += db->max_client_conn;
+			else
+				client_count = -1;
+		}
+
 		if (db->forced_user)
-			fd_count += db->pool_size;
+			pool_count += db->pool_size;
 		else
-			fd_count += db->pool_size * total_users;
+			pool_count += db->pool_size * total_users;
 	}
 
+	if (cf_max_client_conn >= 0 && (client_count < 0 || client_count > cf_max_client_conn))
+		client_count = cf_max_client_conn;
+
+	/* calculate theoretical max, +10 is just in case */
+	if (client_count >= 0)
+		fd_count = client_count + pool_count + 10;
+	else
+		fd_count = -1;
+
 	log_info("File descriptor limit: %d (H:%d), max_client_conn: %d, max fds possible: %d",
-		 (int)lim.rlim_cur, (int)lim.rlim_max, cf_max_client_conn, fd_count);
+		 (int)lim.rlim_cur, (int)lim.rlim_max, client_count, fd_count);
 }
 
 static bool check_old_process_unix(void)

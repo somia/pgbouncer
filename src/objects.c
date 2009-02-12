@@ -460,6 +460,12 @@ PgPool *get_pool(PgDatabase *db, PgUser *user)
 	return new_pool(db, user);
 }
 
+/* get number of clients in pool */
+int get_pool_client_count(PgPool *pool)
+{
+	return statlist_count(&pool->active_client_list) + statlist_count(&pool->waiting_client_list);
+}
+
 /* deactivate socket and put into wait queue */
 static void pause_client(PgSocket *client)
 {

@@ -597,7 +597,9 @@ void config_postprocess(void)
 			kill_database(db);
 			continue;
 		}
-		if (db->pool_size < 0)
+		if (db->max_client_conn < -1)
+			db->max_client_conn = cf_default_pool_max_client_conn;
+		if (db->pool_size < -1)
 			db->pool_size = cf_default_pool_size;
 		if (db->res_pool_size < 0)
 			db->res_pool_size = cf_res_pool_size;

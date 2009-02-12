@@ -32,6 +32,7 @@ extern ObjectCache *iobuf_cache;
 PgDatabase *find_database(const char *name);
 PgUser *find_user(const char *name);
 PgPool *get_pool(PgDatabase *, PgUser *);
+int get_pool_client_count(PgPool *);
 bool find_server(PgSocket *client)		_MUSTCHECK;
 bool release_server(PgSocket *server)		/* _MUSTCHECK */;
 bool finish_client_login(PgSocket *client)	_MUSTCHECK;

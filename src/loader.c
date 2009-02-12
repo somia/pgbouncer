@@ -166,13 +166,25 @@ static void set_autodb(char *connstr)
 	cf_autodb_connstr = tmp;
 }
 
+static int parse_unlimited_int(const char *val)
+{
+	if (strcmp(val, "unlimited") == 0)
+		return -1;
+
+	if (*val < '0' || *val > '9')
+		return -2;
+
+	return atoi(val);
+}
+
 /* fill PgDatabase from connstr */
 void parse_database(char *name, char *connstr)
 {
 	char *p, *key, *val;
 	PktBuf buf;
 	PgDatabase *db;
-	int pool_size = -1;
+	int max_client_conn = -2;
+	int pool_size = -2;
 	int res_pool_size = -1;
 
 	char *dbname = name;
@@ -219,6 +231,8 @@ void parse_database(char *name, char *connstr)
 			datestyle = val;
 		else if (strcmp("timezone", key) == 0)
 			timezone = val;
+		else if (strcmp("max_client_conn", key) == 0)
+			max_client_conn = parse_unlimited_int(val);
 		else if (strcmp("pool_size", key) == 0)
 			pool_size = atoi(val);
 		else if (strcmp("reserve_pool", key) == 0)
@@ -320,7 +334,9 @@ void parse_database(char *name, char *connstr)
 			tag_database_dirty(db);
 	}
 
-	/* if pool_size < 0 it will be set later */
+	/* if max_client_conn < -1 it will be set later */
+	db->max_client_conn = max_client_conn;
+	/* if pool_size < -1 it will be set later */
 	db->pool_size = pool_size;
 	db->res_pool_size = res_pool_size;
 	db->addr.port = v_port;
@@ -537,15 +553,31 @@ bool cf_set_int(ConfElem *elem, const char *val, PgSocket *console)
 	return true;
 }
 
+bool cf_set_unlimited_int(ConfElem *elem, const char *val, PgSocket *console)
+{
+	int *int_p = elem->dst;
+	int i = parse_unlimited_int(val);
+	if (i < -1) {
+		admin_error(console, "bad value: %s", val);
+		return false;
+	}
+	*int_p = i;
+	return true;
+}
+
 const char *cf_get_int(ConfElem *elem)
 {
 	static char numbuf[32];
 	int val;
 
 	val = *(int *)elem->dst;
-	sprintf(numbuf, "%d", val);
+	if (val >= 0)
+		sprintf(numbuf, "%d", val);
+	else
+		strcpy(numbuf, "unlimited");
 	return numbuf;
 }
+
 bool cf_set_time(ConfElem *elem, const char *val, PgSocket *console)
 {
 	usec_t *time_p = elem->dst;

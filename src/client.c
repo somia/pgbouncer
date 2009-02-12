@@ -97,6 +97,13 @@ bool set_pool(PgSocket *client, const char *dbname, const char *username)
 		return false;
 	}
 
+	if (db->max_client_conn >= 0 && get_pool_client_count(client->pool) >= db->max_client_conn) {
+		if (strcmp(dbname, "pgbouncer") != 0) {
+			disconnect_client(client, true, "no more connections allowed for pool");
+			return false;
+		}
+	}
+
 	return true;
 }
 
@@ -139,7 +146,7 @@ static bool decide_startup_pool(PgSocket *client, PktHdr *pkt)
 	/* check if limit allows, dont limit admin db
 	   nb: new incoming conn will be attached to PgSocket, thus
 	   get_active_client_count() counts it */
-	if (get_active_client_count() > cf_max_client_conn) {
+	if (cf_max_client_conn >= 0 && get_active_client_count() > cf_max_client_conn) {
 		if (strcmp(dbname, "pgbouncer") != 0) {
 			disconnect_client(client, true, "no more connections allowed");
 			return false;

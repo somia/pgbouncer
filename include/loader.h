@@ -55,6 +55,7 @@ bool iniparser(const char *fn, ConfSection *sect_list, bool reload)  _MUSTCHECK;
 
 const char * cf_get_int(ConfElem *elem);
 bool cf_set_int(ConfElem *elem, const char *value, PgSocket *console);
+bool cf_set_unlimited_int(ConfElem *elem, const char *value, PgSocket *console);
 
 const char * cf_get_time(ConfElem *elem);
 bool cf_set_time(ConfElem *elem, const char *value, PgSocket *console);
