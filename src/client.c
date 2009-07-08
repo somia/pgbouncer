@@ -22,6 +22,29 @@
 
 #include "bouncer.h"
 
+static void log_request(PgSocket *client, PktHdr *pkt)
+{
+	client->last_packet = pkt->type;
+
+	if (pkt->type == 'Q') {
+		size_t size = mbuf_avail(&pkt->data);
+		if (size > sizeof (client->last_query))
+			size = sizeof (client->last_query);
+
+		memcpy(client->last_query, pkt->data.pos, size);
+
+		size_t end;
+		if (size == 0)
+			end = 0;
+		else if (size == sizeof (client->last_query))
+			end = size - 1;
+		else
+			end = size;
+
+		client->last_query[end] = '\0';
+	}
+}
+
 static bool check_client_passwd(PgSocket *client, const char *passwd)
 {
 	char md5[MD5_PASSWD_LEN + 1];
@@ -281,6 +304,8 @@ static bool handle_client_startup(PgSocket *client, PktHdr *pkt)
 static bool handle_client_work(PgSocket *client, PktHdr *pkt)
 {
 	SBuf *sbuf = &client->sbuf;
+
+	log_request(client, pkt);
 
 	switch (pkt->type) {
 
