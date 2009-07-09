@@ -3,6 +3,7 @@
 #define VAR_DATESTYLE_LEN	16
 #define VAR_TIMEZONE_LEN	36
 #define VAR_STDSTR_LEN		4
+#define VAR_CLIENTPID_LEN	12
 
 typedef struct VarCache VarCache;
 
@@ -11,6 +12,7 @@ struct VarCache {
 	char datestyle[VAR_DATESTYLE_LEN];
 	char timezone[VAR_TIMEZONE_LEN];
 	char std_strings[VAR_STDSTR_LEN];
+	char client_pid[VAR_CLIENTPID_LEN];
 };
 
 bool varcache_set(VarCache *cache, const char *key, const char *value) /* _MUSTCHECK */;

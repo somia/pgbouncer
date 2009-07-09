@@ -26,6 +26,7 @@ struct var_lookup {
 	const char *name;
 	int offset;
 	int len;
+	bool skip;
 };
 
 static const struct var_lookup lookup [] = {
@@ -33,6 +34,7 @@ static const struct var_lookup lookup [] = {
  {"datestyle",                   offsetof(VarCache, datestyle),       VAR_DATESTYLE_LEN },
  {"timezone",                    offsetof(VarCache, timezone),        VAR_TIMEZONE_LEN },
  {"standard_conforming_strings", offsetof(VarCache, std_strings),     VAR_STDSTR_LEN },
+ {"client_pid",                  offsetof(VarCache, client_pid),      VAR_CLIENTPID_LEN, true },
  {NULL},
 };
 
@@ -146,6 +148,9 @@ bool varcache_apply(PgSocket *server, PgSocket *client, bool *changes_p)
 	debug_sql = pkt.buf + pkt.write_pos;
 
 	for (lk = lookup; lk->name; lk++) {
+		if (lk->skip)
+			continue;
+
 		sval = get_value(&server->vars, lk);
 		cval = get_value(&client->vars, lk);
 		changes += apply_var(&pkt, lk->name, cval, sval, std_quote);

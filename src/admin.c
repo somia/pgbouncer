@@ -479,8 +479,8 @@ static bool admin_show_users(PgSocket *admin, const char *arg)
 	return true;
 }
 
-#define SKF_STD "sssssisiTTssss"
-#define SKF_DBG "sssssisiTTssssiiiiiii"
+#define SKF_STD "sssssisiTTsssss"
+#define SKF_DBG "sssssisiTTsssssiiiiiii"
 
 static void socket_header(PktBuf *buf, bool debug)
 {
@@ -490,6 +490,7 @@ static void socket_header(PktBuf *buf, bool debug)
 				    "connect_time", "request_time",
 				    "ptr", "link",
 				    "last_packet", "last_query",
+				    "client_pid",
 				    "recv_pos", "pkt_pos", "pkt_remain",
 				    "send_pos", "send_remain",
 				    "pkt_avail", "send_avail");
@@ -537,6 +538,7 @@ static void socket_row(PktBuf *buf, PgSocket *sk, const char *state, bool debug)
 			     sk->request_time,
 			     ptrbuf, linkbuf,
 			     last_packet, sk->last_query,
+			     sk->vars.client_pid,
 			     io ? io->recv_pos : 0,
 			     io ? io->parse_pos : 0,
 			     sk->sbuf.pkt_remain,
