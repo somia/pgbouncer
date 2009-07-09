@@ -22,6 +22,11 @@
 
 #include "bouncer.h"
 
+static void log_request(PgSocket *server, PktHdr *pkt)
+{
+	server->last_packet = pkt->type;
+}
+
 static bool load_parameter(PgSocket *server, PktHdr *pkt, bool startup)
 {
 	const char *key, *val;
@@ -186,6 +191,8 @@ static bool handle_server_work(PgSocket *server, PktHdr *pkt)
 	PgSocket *client = server->link;
 
 	Assert(!server->pool->db->admin);
+
+	log_request(server, pkt);
 
 	switch (pkt->type) {
 	default:
