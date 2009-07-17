@@ -22,9 +22,12 @@
 
 #include "bouncer.h"
 
+extern int bogo_time;
+
 static void log_request(PgSocket *server, PktHdr *pkt)
 {
 	server->last_packet = pkt->type;
+	server->last_packet_time = ++bogo_time;
 }
 
 static bool load_parameter(PgSocket *server, PktHdr *pkt, bool startup)

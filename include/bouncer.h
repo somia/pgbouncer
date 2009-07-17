@@ -283,6 +283,7 @@ struct PgSocket {
 	VarCache vars;		/* state of interesting server parameters */
 
 	unsigned last_packet;
+	int last_packet_time;
 	char last_query[256];
 
 	SBuf sbuf;		/* stream buffer, must be last */

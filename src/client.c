@@ -22,9 +22,12 @@
 
 #include "bouncer.h"
 
+int bogo_time = 0;
+
 static void log_request(PgSocket *client, PktHdr *pkt)
 {
 	client->last_packet = pkt->type;
+	client->last_packet_time = ++bogo_time;
 
 	if (pkt->type == 'Q') {
 		size_t size = mbuf_avail(&pkt->data);
