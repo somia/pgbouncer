@@ -104,7 +104,7 @@ static inline unsigned iobuf_parse_limit(const IOBuf *buf, MBuf *mbuf, unsigned 
 }
 
 /* recv */
-static inline int _MUSTCHECK iobuf_recv_limit(IOBuf *io, int fd, unsigned len)
+static inline int _MUSTCHECK iobuf_recv_limit(IOBuf *io, int fd, unsigned len, TraceBuf *trace)
 {
 	uint8_t *pos = io->buf + io->recv_pos;
 	int got;
@@ -116,18 +116,20 @@ static inline int _MUSTCHECK iobuf_recv_limit(IOBuf *io, int fd, unsigned len)
 	Assert(len > 0);
 
 	got = safe_recv(fd, pos, len, 0);
-	if (got > 0)
+	if (got > 0) {
+		tracebuf_append(trace, pos, got);
 		io->recv_pos += got;
+	}
 	return got;
 }
 
-static inline int _MUSTCHECK iobuf_recv_max(IOBuf *io, int fd)
+static inline int _MUSTCHECK iobuf_recv_max(IOBuf *io, int fd, TraceBuf *trace)
 {
-	return iobuf_recv_limit(io, fd, iobuf_amount_recv(io));
+	return iobuf_recv_limit(io, fd, iobuf_amount_recv(io), trace);
 }
 
 /* send tagged data */
-static inline int _MUSTCHECK iobuf_send_pending(IOBuf *io, int fd)
+static inline int _MUSTCHECK iobuf_send_pending(IOBuf *io, int fd, TraceBuf *trace)
 {
 	uint8_t *pos = io->buf + io->done_pos;
 	int len, res;
@@ -136,8 +138,10 @@ static inline int _MUSTCHECK iobuf_send_pending(IOBuf *io, int fd)
 	Assert(len > 0);
 
 	res = safe_send(fd, pos, len, 0);
-	if (res > 0)
+	if (res > 0) {
+		tracebuf_append(trace, pos, res);
 		io->done_pos += res;
+	}
 	return res;
 }
 

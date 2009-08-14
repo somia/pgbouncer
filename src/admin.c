@@ -479,8 +479,8 @@ static bool admin_show_users(PgSocket *admin, const char *arg)
 	return true;
 }
 
-#define SKF_STD "sssssisiTTsssiss"
-#define SKF_DBG "sssssisiTTsssissiiiiiii"
+#define SKF_STD "sssssisiTTsssissss"
+#define SKF_DBG "sssssisiTTsssissssiiiiiii"
 
 static void socket_header(PktBuf *buf, bool debug)
 {
@@ -491,6 +491,7 @@ static void socket_header(PktBuf *buf, bool debug)
 				    "ptr", "link",
 				    "last_packet", "last_packet_time", "last_query",
 				    "client_pid",
+				    "recv_trace_path", "send_trace_path",
 				    "recv_pos", "pkt_pos", "pkt_remain",
 				    "send_pos", "send_remain",
 				    "pkt_avail", "send_avail");
@@ -513,6 +514,8 @@ static void socket_row(PktBuf *buf, PgSocket *sk, const char *state, bool debug)
 	char l_addr[32], r_addr[32];
 	char last_packet[] = { (char) sk->last_packet, '\0' };
 	IOBuf *io = sk->sbuf.io;
+	char recv_trace_path[PATH_MAX];
+	char send_trace_path[PATH_MAX];
 
 	if (io) {
 		pkt_avail = iobuf_amount_parse(sk->sbuf.io);
@@ -528,6 +531,9 @@ static void socket_row(PktBuf *buf, PgSocket *sk, const char *state, bool debug)
 	else
 		linkbuf[0] = 0;
 
+	tracebuf_dump(&sk->sbuf.recv_trace, recv_trace_path, sizeof (recv_trace_path));
+	tracebuf_dump(&sk->sbuf.send_trace, send_trace_path, sizeof (send_trace_path));
+
 	pktbuf_write_DataRow(buf, debug ? SKF_DBG : SKF_STD,
 			     is_server_socket(sk) ? "S" :"C",
 			     sk->auth_user ? sk->auth_user->name : "(nouser)",
@@ -539,6 +545,7 @@ static void socket_row(PktBuf *buf, PgSocket *sk, const char *state, bool debug)
 			     ptrbuf, linkbuf,
 			     last_packet, sk->last_packet_time, sk->last_query,
 			     sk->vars.client_pid,
+			     recv_trace_path, send_trace_path,
 			     io ? io->recv_pos : 0,
 			     io ? io->parse_pos : 0,
 			     sk->sbuf.pkt_remain,

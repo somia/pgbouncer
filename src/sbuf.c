@@ -70,6 +70,8 @@ void sbuf_init(SBuf *sbuf, sbuf_cb_t proto_fn)
 {
 	memset(sbuf, 0, sizeof(SBuf));
 	sbuf->proto_cb = proto_fn;
+	tracebuf_init(&sbuf->recv_trace);
+	tracebuf_init(&sbuf->send_trace);
 }
 
 /* got new socket from accept() */
@@ -431,7 +433,7 @@ try_more:
 	}
 
 	/* actually send it */
-	res = iobuf_send_pending(io, sbuf->dst->sock);
+	res = iobuf_send_pending(io, sbuf->dst->sock, &sbuf->dst->send_trace);
 	if (res < 0) {
 		if (errno == EAGAIN) {
 			if (!sbuf_queue_send(sbuf))
@@ -546,7 +548,7 @@ static bool sbuf_actual_recv(SBuf *sbuf, unsigned len)
 	Assert(len > 0);
 	Assert(iobuf_amount_recv(io) >= len);
 
-	got = iobuf_recv_limit(io, sbuf->sock, len);
+	got = iobuf_recv_limit(io, sbuf->sock, len, &sbuf->recv_trace);
 	if (got == 0) {
 		/* eof from socket */
 		sbuf_call_proto(sbuf, SBUF_EV_RECV_FAILED);

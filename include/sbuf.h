@@ -74,6 +74,9 @@ struct SBuf {
 	SBuf *dst;		/* target SBuf for current packet */
 
 	IOBuf *io;		/* data buffer, lazily allocated */
+
+	TraceBuf recv_trace;
+	TraceBuf send_trace;
 };
 
 #define sbuf_socket(sbuf) ((sbuf)->sock)

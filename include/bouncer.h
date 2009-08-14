@@ -68,6 +68,7 @@ typedef struct PktHdr PktHdr;
 
 extern int cf_sbuf_len;
 
+#include "tracebuf.h"
 #include "aatree.h"
 #include "hash.h"
 #include "util.h"
